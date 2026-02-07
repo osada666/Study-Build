@@ -1,0 +1,3276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Build - 学習管理システム</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #676f78 0%, #6f7a84 100%);
+            color: #212529;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #808080;
+            border-radius: 8px;
+            color: #808080;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn:hover,
+        .tab-btn.active {
+            background: #808080;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2, .card h3 {
+            color: #212529;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #808080;
+            padding-bottom: 10px;
+        }
+
+        /* タイマー - 改善されたデザイン */
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #464545b0 0%, #464646b0 100%);
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timer-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .timer-circle {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 20px 0;
+        }
+
+        .timer-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#ffffff 0deg, #e0dddc 360deg);
+            padding: 8px;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .timer-progress-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #858585 0%, #242424 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .timer-display {
+            font-size: 3.2rem;
+            font-weight: bold;
+            color: white;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 10px rgba(239, 238, 238, 0.3);
+            letter-spacing: 2px;
+            z-index: 2;
+        }
+
+        .timer-label {
+            position: absolute;
+            bottom: 60px;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.8);
+            font-weight: 500;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .timer-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 120px;
+            box-shadow: 0 4px 15px rgba(115, 115, 115, 0.2);
+        }
+
+        .timer-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .timer-btn:hover::before {
+            left: 100%;
+        }
+
+        .timer-btn-start {
+            background: linear-gradient(135deg, #3c3c3c 0%, #3c3c3c 100%);
+            color: rgb(255, 255, 255);
+        }
+
+        .timer-btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .timer-btn-pause {
+            background: linear-gradient(135deg, #3d3d3d 0%, #3c3c3c 100%);
+            color: #ffffff;
+        }
+
+        .timer-btn-pause:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(252, 182, 159, 0.4);
+        }
+
+        .timer-btn-stop {
+            background: linear-gradient(135deg, #3c3c3c 0%, #3c3c3c 100%);
+            color: #ffffff;
+        }
+
+        .timer-btn-stop:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(168, 237, 234, 0.4);
+        }
+
+        .timer-btn:active {
+            transform: translateY(0);
+        }
+
+        .timer-btn.running {
+            background: linear-gradient(135deg, lab(74.42% 0 -0.01) 0%, lab(25.76% 0 0) 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .subject-selector {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .subject-selector label {
+            display: block;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .subject-selector select {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .subject-selector select:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 4px 20px rgba(79, 172, 254, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .timer-stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 30px;
+            gap: 20px;
+        }
+
+        .timer-stat {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            flex: 1;
+        }
+
+        .timer-stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffffff;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .timer-stat-label {
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+
+        /* Barcode scanner modal */
+        .scanner-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
+        }
+
+        .scanner-modal.active { display: flex; }
+
+        .scanner-box {
+            background: white;
+            width: 90%;
+            max-width: 700px;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .scanner-video {
+            width: 100%;
+            height: 360px;
+            background: black;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .scanner-controls { display:flex; gap:8px; margin-top:8px; justify-content:flex-end; }
+
+
+        /* フォーム */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            color: #212529;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        /* Todo + カレンダー統合レイアウト */
+        .todo-calendar-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            height: 600px;
+        }
+
+        .todo-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .calendar-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-nav {
+            background: #404040;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .calendar-nav:hover {
+            background: #0b5ed7;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+        }
+
+        .view-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid #0d6efd;
+            color: #0d6efd;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .view-btn:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        .view-btn:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+
+        .view-btn.active {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-day {
+            background: white;
+            padding: 8px;
+            min-height: 80px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .calendar-day:hover {
+            background: #f8f9fa;
+        }
+
+        .calendar-day.other-month {
+            color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        .calendar-day.today {
+            background: #e7f3ff;
+            border-color: #0d6efd;
+        }
+
+        .calendar-day.selected {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .calendar-day-number {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .calendar-todo {
+            font-size: 10px;
+            background: #0d6efd;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .calendar-todo.completed {
+            background: #198754;
+            text-decoration: line-through;
+        }
+
+        .calendar-todo.overdue {
+            background: #dc3545;
+        }
+
+        /* Todo項目 */
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #0d6efd;
+            transition: all 0.3s ease;
+        }
+
+        .todo-item:hover {
+            background: #e9ecef;
+            transform: translateX(3px);
+        }
+
+        .todo-item.completed {
+            opacity: 0.7;
+            border-left-color: #198754;
+        }
+
+        .todo-item.overdue {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .todo-checkbox {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .todo-content {
+            flex: 1;
+        }
+
+        .todo-text {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .todo-text.completed {
+            text-decoration: line-through;
+        }
+
+        .todo-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .selected-date-header {
+            color: #0d6efd;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0d6efd;
+        }
+
+        .quick-add {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .quick-add input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .quick-add button {
+            padding: 8px 16px;
+            background: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 統計 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #0d6efd;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #0d6efd;
+            display: block;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        /* バッジ */
+        .badge-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+        }
+
+        .badge {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .badge.earned {
+            border-color: #ffc107;
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .badge-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .badge-name {
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        /* ランキング */
+        .ranking-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .ranking-tab-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid #0d6efd;
+            color: #0d6efd;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .ranking-tab-btn.active {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .ranking-item.own {
+            background: linear-gradient(135deg, #e7f3ff, #cce7ff);
+            border: 2px solid #0d6efd;
+            font-weight: bold;
+        }
+
+        .ranking-item:hover {
+            background: #e9ecef;
+            transform: translateX(3px);
+        }
+
+        .ranking-item.own:hover {
+            background: linear-gradient(135deg, #cce7ff, #b3d9ff);
+        }
+
+        .rank-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #6c757d;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 16px;
+        }
+
+        .rank-badge.gold {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .rank-badge.silver {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(192, 192, 192, 0.4);
+        }
+
+        .rank-badge.bronze {
+            background: linear-gradient(135deg, #cd7f32, #daa520);
+            color: white;
+            box-shadow: 0 4px 15px rgba(205, 127, 50, 0.4);
+        }
+
+        .friend-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .friend-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #0d6efd;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+
+        .friend-details {
+            flex: 1;
+        }
+
+        .friend-name {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .friend-stats {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .friend-badges {
+            display: flex;
+            gap: 3px;
+            margin-top: 5px;
+        }
+
+        .mini-badge {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .mini-badge.earned {
+            opacity: 1;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .ranking-score {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        .crown-icon {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        /* バッジ進捗 */
+        .badge-progress-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .badge-progress-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .badge-progress-item.earned {
+            border-color: #ffc107;
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .badge-progress-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .badge-progress-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .badge-progress-info {
+            flex: 1;
+        }
+
+        .badge-progress-name {
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+
+        .badge-progress-desc {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0d6efd, #0b5ed7);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.completed {
+            background: linear-gradient(90deg, #198754, #157347);
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: #6c757d;
+            text-align: center;
+        }
+
+        /* タイムライン */
+        .timeline-post-form {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 2px solid #0d6efd;
+        }
+
+        .timeline-post-form h3 {
+            color: #0d6efd;
+            margin-bottom: 15px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .timeline-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .timeline-post {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .timeline-post:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .timeline-post.own {
+            border-left: 4px solid #0d6efd;
+            background: linear-gradient(135deg, #f8f9ff, #e7f3ff);
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .post-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #0d6efd;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+
+        .post-info {
+            flex: 1;
+        }
+
+        .post-author {
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .post-type {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .post-type.study {
+            background: #e7f3ff;
+            color: #0d6efd;
+        }
+
+        .post-type.achievement {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .post-type.motivation {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .post-type.question {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .post-content {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #212529;
+            margin-bottom: 15px;
+        }
+
+        .post-stats {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .post-action-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .post-action-btn:hover {
+            background: #f8f9fa;
+            color: #0d6efd;
+        }
+
+        .post-action-btn.liked {
+            color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .post-action-btn.commented {
+            color: #0d6efd;
+            background: #e7f3ff;
+        }
+
+        .comments-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+            display: none;
+        }
+
+        .comments-section.show {
+            display: block;
+        }
+
+        .comment-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .comment-btn {
+            padding: 8px 16px;
+            background: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .comment {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .comment-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #6c757d;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .comment-content {
+            flex: 1;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            font-size: 13px;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+
+        .comment-text {
+            font-size: 14px;
+            color: #495057;
+            line-height: 1.4;
+        }
+
+        .comment-time {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        .no-posts {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .no-posts-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .todo-calendar-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .calendar-day {
+                min-height: 60px;
+                padding: 4px;
+            }
+            
+            .calendar-todo {
+                font-size: 9px;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .timer-display {
+                font-size: 2.5rem;
+            }
+
+            .timer-circle {
+                width: 220px;
+                height: 220px;
+            }
+            
+            .timer-display {
+                font-size: 2.5rem;
+            }
+            
+            .timer-controls {
+                gap: 10px;
+            }
+            
+            .timer-btn {
+                padding: 12px 24px;
+                min-width: 100px;
+                font-size: 14px;
+            }
+            
+            .timer-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #6c757d;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #212529;
+        }
+
+/* 科目追加方法タブ */
+.subject-add-methods {
+    margin-bottom: 30px;
+}
+
+.add-method-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+}
+
+.method-tab-btn {
+    padding: 10px 20px;
+    background: white;
+    border: 2px solid #0d6efd;
+    color: #0d6efd;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.method-tab-btn.active,
+.method-tab-btn:hover {
+    background: #0d6efd;
+    color: white;
+}
+
+.add-method-content {
+    display: none;
+}
+
+.add-method-content.active {
+    display: block;
+}
+
+/* バーコードスキャナー */
+/* DELETED */
+
+/* 書籍結果表示 */
+/* DELETED */
+
+/* 希少度別のバッジスタイル */
+.badge-rarity {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.rarity-common {
+    background: linear-gradient(135deg, #6c757d, #adb5bd);
+    color: white;
+}
+
+.rarity-uncommon {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.rarity-rare {
+    background: linear-gradient(135deg, #007bff, #6610f2);
+    color: white;
+}
+
+.rarity-epic {
+    background: linear-gradient(135deg, #6f42c1, #e83e8c);
+    color: white;
+}
+
+.rarity-legendary {
+    background: linear-gradient(135deg, #fd7e14, #ffc107);
+    color: #212529;
+    animation: legendaryGlow 2s ease-in-out infinite alternate;
+}
+
+.rarity-mythical {
+    background: linear-gradient(135deg, #dc3545, #fd7e14);
+    color: white;
+    animation: mythicalPulse 1.5s ease-in-out infinite;
+}
+
+.rarity-transcendent {
+    background: linear-gradient(135deg, #6f42c1, #007bff, #28a745, #ffc107);
+    background-size: 400% 400%;
+    color: white;
+    animation: transcendentRainbow 3s ease infinite;
+}
+
+@keyframes legendaryGlow {
+    from { box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
+    to { box-shadow: 0 0 20px rgba(255, 193, 7, 0.8); }
+}
+
+@keyframes mythicalPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes transcendentRainbow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 達成率表示 */
+.achievement-rate {
+    font-size: 11px;
+    color: #6c757d;
+    margin-top: 3px;
+    font-weight: normal;
+}
+
+.achievement-rate.ultra-rare {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.achievement-rate.super-rare {
+    color: #fd7e14;
+    font-weight: bold;
+}
+
+.achievement-rate.rare {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+/* バッジ進捗での達成率表示 */
+.badge-progress-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #dee2e6;
+}
+
+.global-stats {
+    font-size: 10px;
+    color: #6c757d;
+}
+
+.rarity-indicator {
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Study Build</h1>
+            <p>学習を管理</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="showTab('planner')">プラン</button>
+            <button class="tab-btn" onclick="showTab('timer')">タイマー</button>
+            <button class="tab-btn" onclick="showTab('subjects')">科目管理</button>
+            <button class="tab-btn" onclick="showTab('stats')">統計</button>
+            <button class="tab-btn" onclick="showTab('badges')">バッジ</button>
+            <button class="tab-btn" onclick="showTab('timeline')">タイムライン</button>
+        </div>
+
+        <!-- プランナータブ（Todo + カレンダー統合） -->
+        <div id="planner" class="tab-content active">
+            <div class="todo-calendar-container">
+                <!-- Todo パネル -->
+                <div class="todo-panel">
+                    <div class="selected-date-header" id="selectedDateHeader">
+                        今日のタスク
+                    </div>
+                    
+                    <div class="quick-add">
+                        <input type="text" id="quickTodoInput" placeholder="新しいタスクを追加...">
+                        <button onclick="addQuickTodo()">追加</button>
+                    </div>
+                    
+                    <div id="todoList"></div>
+                    
+                    <button class="btn" onclick="openTodoModal()" style="width: 100%; margin-top: 15px;">
+                        詳細なタスクを追加
+                    </button>
+                </div>
+
+                <!-- カレンダー パネル -->
+                <div class="calendar-panel">
+                    <div class="calendar-header">
+                        <button class="calendar-nav" onclick="changeMonth(-1)">‹</button>
+                        <h3 id="currentMonth"></h3>
+                        <button class="calendar-nav" onclick="changeMonth(1)">›</button>
+                        
+                        <div class="view-toggle">
+                            <button class="view-btn active" onclick="setCalendarView('month')">月</button>
+                            <button class="view-btn" onclick="setCalendarView('week')">週</button>
+                        </div>
+                    </div>
+                    
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タイマータブ -->
+        <div id="timer" class="tab-content">
+    <div class="card" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+        <div class="timer-container">
+            <h2 style="color: white; text-align: center; margin-bottom: 20px; font-size: 2rem; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                勉強タイマー-
+            </h2>
+            
+            <div class="subject-selector">
+                <label for="subjectSelect"> 科目を選択</label>
+                <select id="subjectSelect">
+                    <option value="">科目を選択してください</option>
+                </select>
+            </div>
+
+            <div class="timer-circle">
+                <div class="timer-progress">
+                    <div class="timer-progress-inner">
+                        <div class="timer-display" id="timerDisplay">00:00:00</div>
+                        <div class="timer-label">勉強時間</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timer-controls">
+                <button class="timer-btn timer-btn-start" id="startBtn" onclick="startTimer()">
+                    ▶️ 開始
+                </button>
+                <button class="timer-btn timer-btn-pause" onclick="pauseTimer()">
+                    ⏸️ 一時停止
+                </button>
+            </div>
+
+            <!-- Barcode scanner modal -->
+            <div id="scannerModal" class="scanner-modal" aria-hidden="true">
+                <div class="scanner-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <strong>バーコードスキャナ</strong>
+                        <div>
+                            <button class="btn btn-small" onclick="closeScanner()">閉じる</button>
+                        </div>
+                    </div>
+                    <div id="scannerVideo" class="scanner-video"></div>
+                    <div id="scannerResult" style="margin-top:8px;color:#212529;"></div>
+                    <div class="scanner-controls">
+                        <button class="btn btn-small" onclick="startScanner()">スキャン開始</button>
+                        <button class="btn btn-small" onclick="stopScanner()">停止</button>
+                        <button class="btn btn-small" onclick="manualIsbn()">手入力で追加</button>
+                    </div>
+                </div>
+            </div>
+                <button class="timer-btn timer-btn-stop" onclick="stopTimer()">
+                    ⏹️ 完了
+                </button>
+            </div>
+
+            <div class="timer-stats">
+                <div class="timer-stat">
+                    <span class="timer-stat-number" id="todayStudyTime">0</span>
+                    <div class="timer-stat-label">今日の勉強時間(分)</div>
+                </div>
+                <div class="timer-stat">
+                    <span class="timer-stat-number" id="currentSession">0</span>
+                    <div class="timer-stat-label">現在のセッション(分)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- 科目管理タブ -->
+        <div id="subjects" class="tab-content">
+    <div class="card">
+        <h2>📚 科目管理</h2>
+        
+        <div class="subject-add-methods">
+            <div class="add-method-tabs">
+                <button class="method-tab-btn active" onclick="showAddMethod('manual')">✏️ 手動入力</button>
+                <!-- DELETED: バーコード読み取りボタン -->
+            </div>
+            
+            <!-- 手動入力 -->
+            <div id="manual-add" class="add-method-content active">
+                <div class="input-group">
+                    <input type="text" id="subjectInput" placeholder="新しい科目名を入力...">
+                    <button class="btn" onclick="addSubject()">科目追加</button>
+                </div>
+            </div>
+            
+            <!-- バーコード読み取り機能を削除 -->
+
+        </div>
+
+        <div id="subjectList"></div>
+    </div>
+</div>
+
+        <!-- 統計タブ -->
+        <div id="stats" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalTime">0</span>
+                    <div class="stat-label">総勉強時間 (分)</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="completedTodos">0</span>
+                    <div class="stat-label">完了したタスク</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalSubjects">0</span>
+                    <div class="stat-label">登録科目数</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="weeklyTime">0</span>
+                    <div class="stat-label">今週の勉強時間 (分)</div>
+                </div>
+            </div>
+
+            <!-- フレンドランキング -->
+            <div class="card">
+                <h3>🏆 フレンドランキング</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="ranking-tabs">
+                        <button class="ranking-tab-btn active" onclick="showRanking('time')">勉強時間</button>
+                        <button class="ranking-tab-btn" onclick="showRanking('tasks')">完了タスク</button>
+                        <button class="ranking-tab-btn" onclick="showRanking('badges')">バッジ数</button>
+                    </div>
+                    <button class="btn btn-small" onclick="openFriendModal()">フレンド追加</button>
+                </div>
+                
+                <div id="friendRanking"></div>
+            </div>
+
+            <!-- バッジ獲得状況 -->
+            <div class="card">
+                <h3>🏅 バッジ獲得状況</h3>
+                <p style="color: #6c757d; margin-bottom: 20px;">勉強時間やタスク完了でバッジを獲得しよう！</p>
+                
+                <div class="badge-progress-container" id="badgeProgressContainer"></div>
+            </div>
+
+            <!-- 科目別統計 -->
+            <div class="card">
+                <h3>📊 科目別勉強時間</h3>
+                <div class="chart-container">
+                    <canvas id="studyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- バッジタブ -->
+        <div id="badges" class="tab-content">
+            <div class="card">
+                <h2>🏆 獲得バッジ</h2>
+                <p style="color: #6c757d; margin-bottom: 20px;">学習を続けてバッジを獲得しよう！</p>
+                
+                <div class="badge-container" id="badgeContainer"></div>
+            </div>
+        </div>
+
+        <!-- タイムラインタブ -->
+        <div id="timeline" class="tab-content">
+            <div class="card">
+                <h2>📱 タイムライン</h2>
+                <p style="color: #6c757d; margin-bottom: 20px;">フレンドと勉強の進捗を共有しよう！</p>
+        
+                <div class="timeline-post-form">
+                    <h3>📝 投稿を作成</h3>
+                    <div class="input-group">
+                        <textarea id="postContent" rows="3" placeholder="今日の勉強について投稿しよう！例：数学を30分勉強しました！"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="postType" style="padding: 8px; border-radius: 6px; border: 1px solid #dee2e6;">
+                            <option value="study">📚 勉強報告</option>
+                            <option value="achievement">🏆 達成報告</option>
+                            <option value="motivation">💪 モチベーション</option>
+                            <option value="question">❓ 質問・相談</option>
+                        </select>
+                        <button class="btn" onclick="createPost()">投稿する</button>
+                    </div>
+                </div>
+        
+                <div class="timeline-container" id="timelineContainer">
+                    <!-- タイムライン投稿がここに表示される -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Todo詳細追加モーダル -->
+    <div id="todoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTodoModal()">&times;</span>
+            <h3>タスクを追加</h3>
+            
+            <div class="input-group">
+                <label for="todoTitle">タスク名:</label>
+                <input type="text" id="todoTitle" placeholder="例: 数学の宿題">
+            </div>
+            
+            <div class="input-group">
+                <label for="todoSubject">科目:</label>
+                <select id="todoSubject">
+                    <option value="">科目を選択（任意）</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="todoDate">期限:</label>
+                <input type="date" id="todoDate">
+            </div>
+            
+            <div class="input-group">
+                <label for="todoNotes">メモ:</label>
+                <textarea id="todoNotes" rows="3" placeholder="詳細やメモ（任意）"></textarea>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="addDetailedTodo()">追加</button>
+                <button class="btn btn-secondary" onclick="closeTodoModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let timer = null;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let isRunning = false;
+        let currentChart = null;
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        let calendarView = 'month';
+
+        // データ管理
+        let studyData = {
+            subjects: ['数学', '英語', '国語', '理科', '社会'],
+            todos: [],
+            studyTime: {},
+            totalTime: 0,
+            completedTodos: 0,
+            badges: [],
+            friends: [
+                { 
+                    name: 'あなた', 
+                    time: 0, 
+                    tasks: 0,
+                    badges: [],
+                    avatar: '👤',
+                    isOwn: true
+                },
+                { 
+                    name: '田中さん', 
+                    time: 320, 
+                    tasks: 25, 
+                    badges: ['first_study', 'consistent', 'productive'], 
+                    avatar: '👨', 
+                    isOwn: false 
+                },
+                { 
+                    name: '佐藤さん', 
+                    time: 280, 
+                    tasks: 18, 
+                    badges: ['first_study', 'consistent'], 
+                    avatar: '👩', 
+                    isOwn: false 
+                },
+                { 
+                    name: '山田さん', 
+                    time: 150, 
+                    tasks: 12, 
+                    badges: ['first_study'], 
+                    avatar: '👦', 
+                    isOwn: false 
+                }
+            ],
+            currentRanking: 'time',
+            timeline: [],
+            comments: {}
+        };
+
+        // バッジ定義
+// バッジ定義 - 超高難易度版（時間単位）+ 達成率データ
+const badgeDefinitions = [
+    // 🔰 初心者バッジ（時間単位）
+    { id: 'first_study', name: '初学者', icon: '🔰', desc: '初回勉強完了', requirement: 1, type: 'time', unit: '分', achievementRate: 98.5, rarity: 'common' },
+    { id: 'getting_started', name: 'スタートダッシュ', icon: '🚀', desc: '累計3時間勉強達成', requirement: 3, type: 'time', unit: '時間', achievementRate: 87.2, rarity: 'common' },
+    
+    // ⏰ 勉強時間バッジ（超高難易度・時間単位）
+    { id: 'dedicated', name: '献身者', icon: '💪', desc: '累計10時間勉強達成', requirement: 10, type: 'time', unit: '時間', achievementRate: 65.4, rarity: 'uncommon' },
+    { id: 'scholar', name: '学者', icon: '🎓', desc: '累計25時間勉強達成', requirement: 25, type: 'time', unit: '時間', achievementRate: 42.8, rarity: 'uncommon' },
+    { id: 'master', name: '達人', icon: '👑', desc: '累計50時間勉強達成', requirement: 50, type: 'time', unit: '時間', achievementRate: 28.3, rarity: 'rare' },
+    { id: 'expert', name: '専門家', icon: '🧠', desc: '累計100時間勉強達成', requirement: 100, type: 'time', unit: '時間', achievementRate: 15.7, rarity: 'rare' },
+    { id: 'legend', name: '伝説', icon: '🏆', desc: '累計250時間勉強達成', requirement: 250, type: 'time', unit: '時間', achievementRate: 8.2, rarity: 'epic' },
+    { id: 'ultimate', name: '究極者', icon: '💎', desc: '累計500時間勉強達成', requirement: 500, type: 'time', unit: '時間', achievementRate: 4.1, rarity: 'epic' },
+    { id: 'transcendent', name: '超越者', icon: '🌟', desc: '累計1000時間勉強達成', requirement: 1000, type: 'time', unit: '時間', achievementRate: 1.8, rarity: 'legendary' },
+    { id: 'immortal', name: '不滅者', icon: '⚡', desc: '累計2000時間勉強達成', requirement: 2000, type: 'time', unit: '時間', achievementRate: 0.7, rarity: 'legendary' },
+    { id: 'divine', name: '神域', icon: '👼', desc: '累計3000時間勉強達成', requirement: 3000, type: 'time', unit: '時間', achievementRate: 0.3, rarity: 'mythical' },
+    { id: 'cosmic', name: '宇宙級', icon: '🌌', desc: '累計5000時間勉強達成', requirement: 5000, type: 'time', unit: '時間', achievementRate: 0.12, rarity: 'mythical' },
+    { id: 'infinite', name: '無限者', icon: '♾️', desc: '累計10000時間勉強達成', requirement: 10000, type: 'time', unit: '時間', achievementRate: 0.03, rarity: 'transcendent' },
+    
+    // 📋 タスク完了バッジ（超高難易度）
+    { id: 'productive', name: '生産的', icon: '⭐', desc: '100タスク完了', requirement: 100, type: 'tasks', achievementRate: 52.6, rarity: 'uncommon' },
+    { id: 'task_master', name: 'タスクマスター', icon: '✅', desc: '500タスク完了', requirement: 500, type: 'tasks', achievementRate: 18.4, rarity: 'rare' },
+    { id: 'completion_king', name: '完遂王', icon: '👑', desc: '1000タスク完了', requirement: 1000, type: 'tasks', achievementRate: 7.9, rarity: 'epic' },
+    { id: 'task_legend', name: 'タスク伝説', icon: '🏅', desc: '2500タスク完了', requirement: 2500, type: 'tasks', achievementRate: 2.1, rarity: 'legendary' },
+    { id: 'task_god', name: 'タスク神', icon: '⚡', desc: '5000タスク完了', requirement: 5000, type: 'tasks', achievementRate: 0.6, rarity: 'mythical' },
+    { id: 'task_universe', name: 'タスク宇宙', icon: '🌌', desc: '10000タスク完了', requirement: 10000, type: 'tasks', achievementRate: 0.08, rarity: 'transcendent' },
+    
+    // 🔥 連続勉強バッジ（超長期）
+    { id: 'consistent_7', name: '一週間戦士', icon: '🔥', desc: '7日連続勉強', requirement: 7, type: 'streak', achievementRate: 71.3, rarity: 'common' },
+    { id: 'consistent_30', name: '月間チャンピオン', icon: '⚡', desc: '30日連続勉強', requirement: 30, type: 'streak', achievementRate: 34.7, rarity: 'uncommon' },
+    { id: 'consistent_100', name: '百日修行者', icon: '🏃', desc: '100日連続勉強', requirement: 100, type: 'streak', achievementRate: 12.5, rarity: 'rare' },
+    { id: 'consistent_365', name: '年間マスター', icon: '📅', desc: '365日連続勉強', requirement: 365, type: 'streak', achievementRate: 2.8, rarity: 'epic' },
+    { id: 'consistent_500', name: '五百日聖者', icon: '🧘', desc: '500日連続勉強', requirement: 500, type: 'streak', achievementRate: 1.2, rarity: 'legendary' },
+    { id: 'consistent_1000', name: '千日行者', icon: '⛩️', desc: '1000日連続勉強', requirement: 1000, type: 'streak', achievementRate: 0.3, rarity: 'mythical' },
+    { id: 'consistent_1500', name: '永続者', icon: '🌸', desc: '1500日連続勉強', requirement: 1500, type: 'streak', achievementRate: 0.09, rarity: 'transcendent' },
+    { id: 'consistent_2000', name: '不屈の意志', icon: '🗻', desc: '2000日連続勉強', requirement: 2000, type: 'streak', achievementRate: 0.02, rarity: 'transcendent' },
+    
+    // 📚 科目バッジ（高難易度）
+    { id: 'multi_subject_5', name: '博学者', icon: '📖', desc: '5科目以上登録', requirement: 5, type: 'subjects', achievementRate: 58.9, rarity: 'uncommon' },
+    { id: 'multi_subject_10', name: '万能学習者', icon: '🤓', desc: '10科目以上登録', requirement: 10, type: 'subjects', achievementRate: 23.4, rarity: 'rare' },
+    { id: 'multi_subject_20', name: '知識の海', icon: '🧠', desc: '20科目以上登録', requirement: 20, type: 'subjects', achievementRate: 6.7, rarity: 'epic' },
+    { id: 'multi_subject_50', name: '学問の神', icon: '📚', desc: '50科目以上登録', requirement: 50, type: 'subjects', achievementRate: 0.9, rarity: 'mythical' },
+    
+    // 🌅 特別時間バッジ（高難易度）
+    { id: 'early_bird', name: '早起き鳥', icon: '🌅', desc: '朝6時前に勉強開始を50回', requirement: 50, type: 'early_study', achievementRate: 19.6, rarity: 'rare' },
+    { id: 'dawn_warrior', name: '夜明けの戦士', icon: '🌄', desc: '朝5時前に勉強開始を100回', requirement: 100, type: 'dawn_study', achievementRate: 4.3, rarity: 'epic' },
+    { id: 'night_owl', name: '夜更かし学習者', icon: '🦉', desc: '夜10時以降に勉強開始を50回', requirement: 50, type: 'night_study', achievementRate: 31.2, rarity: 'uncommon' },
+    { id: 'midnight_scholar', name: '深夜の学者', icon: '🌙', desc: '夜12時以降に勉強開始を100回', requirement: 100, type: 'midnight_study', achievementRate: 8.7, rarity: 'epic' },
+    { id: 'weekend_warrior', name: '週末戦士', icon: '🏖️', desc: '週末に勉強を100回', requirement: 100, type: 'weekend_study', achievementRate: 26.8, rarity: 'uncommon' },
+    
+    // 💯 集中力バッジ（超高難易度・時間単位）
+    { id: 'focused_3h', name: '集中力3時間', icon: '🎯', desc: '3時間以上の連続勉強を25回', requirement: 25, type: 'long_session_3h', achievementRate: 14.2, rarity: 'rare' },
+    { id: 'focused_5h', name: '集中力5時間', icon: '🔍', desc: '5時間以上の連続勉強を15回', requirement: 15, type: 'long_session_5h', achievementRate: 6.8, rarity: 'epic' },
+    { id: 'focused_8h', name: '集中力8時間', icon: '⚡', desc: '8時間以上の連続勉強を10回', requirement: 10, type: 'long_session_8h', achievementRate: 2.4, rarity: 'legendary' },
+    { id: 'marathon_runner', name: 'マラソンランナー', icon: '🏃‍♂️', desc: '10時間以上の連続勉強を5回', requirement: 5, type: 'marathon_session', achievementRate: 0.8, rarity: 'mythical' },
+    { id: 'ultra_marathon', name: 'ウルトラマラソン', icon: '🏔️', desc: '12時間以上の連続勉強を3回', requirement: 3, type: 'ultra_marathon', achievementRate: 0.3, rarity: 'transcendent' },
+    { id: 'iron_will', name: '鉄の意志', icon: '⚔️', desc: '15時間以上の連続勉強を1回', requirement: 1, type: 'iron_will', achievementRate: 0.1, rarity: 'transcendent' },
+    
+    // 📊 統計バッジ（超高難易度・時間単位）
+    { id: 'daily_goal_30', name: '月間目標達成者', icon: '🎪', desc: '1日2時間を30日達成', requirement: 30, type: 'daily_goal_2h', achievementRate: 22.1, rarity: 'rare' },
+    { id: 'daily_goal_100', name: '百日目標達成者', icon: '🎭', desc: '1日2時間を100日達成', requirement: 100, type: 'daily_goal_2h', achievementRate: 9.3, rarity: 'epic' },
+    { id: 'daily_goal_365', name: '年間目標達成者', icon: '🎨', desc: '1日2時間を365日達成', requirement: 365, type: 'daily_goal_2h', achievementRate: 1.7, rarity: 'legendary' },
+    { id: 'perfectionist', name: '完璧主義者', icon: '💯', desc: '予定したタスクを100%完了を50日', requirement: 50, type: 'perfect_day', achievementRate: 11.4, rarity: 'rare' },
+    { id: 'ultra_perfectionist', name: '究極完璧主義者', icon: '✨', desc: '予定したタスクを100%完了を200日', requirement: 200, type: 'perfect_day', achievementRate: 2.6, rarity: 'legendary' },
+    
+    // 🚀 スペシャルバッジ（超高難易度・時間単位）
+    { id: 'speed_demon', name: 'スピードデーモン', icon: '⚡', desc: '1日で50タスク完了', requirement: 50, type: 'daily_tasks', achievementRate: 3.2, rarity: 'epic' },
+    { id: 'task_hurricane', name: 'タスクハリケーン', icon: '🌪️', desc: '1日で100タスク完了', requirement: 100, type: 'daily_tasks', achievementRate: 0.4, rarity: 'mythical' },
+    { id: 'time_master', name: 'タイムマスター', icon: '⏰', desc: '1日で10時間勉強', requirement: 10, type: 'daily_time', achievementRate: 5.7, rarity: 'epic' },
+    { id: 'time_lord', name: 'タイムロード', icon: '🌌', desc: '1日で15時間勉強', requirement: 15, type: 'daily_time', achievementRate: 1.1, rarity: 'legendary' },
+    { id: 'time_god', name: 'タイム神', icon: '⚡', desc: '1日で20時間勉強', requirement: 20, type: 'daily_time', achievementRate: 0.2, rarity: 'transcendent' },
+    { id: 'comeback_kid', name: 'カムバックキッド', icon: '🔄', desc: '30日間休んだ後に勉強再開', requirement: 1, type: 'comeback', achievementRate: 16.8, rarity: 'rare' },
+    
+    // 🏆 レジェンドバッジ（最高難易度・時間単位）
+    { id: 'study_god', name: '勉強神', icon: '⚡', desc: '全ての基本バッジを獲得', requirement: 1, type: 'meta', achievementRate: 3.4, rarity: 'epic' },
+    { id: 'monthly_titan', name: '月間タイタン', icon: '🌌', desc: '月間200時間勉強を6ヶ月連続', requirement: 6, type: 'monthly_titan', achievementRate: 0.6, rarity: 'mythical' },
+    { id: 'yearly_emperor', name: '年間皇帝', icon: '👑', desc: '年間2000時間勉強達成', requirement: 2000, type: 'yearly_time', achievementRate: 0.4, rarity: 'mythical' },
+    { id: 'decade_legend', name: '十年伝説', icon: '🏛️', desc: '10年間で10000時間勉強達成', requirement: 10000, type: 'decade_time', achievementRate: 0.08, rarity: 'transcendent' },
+    { id: 'ultimate_scholar', name: '究極学者', icon: '🔮', desc: '生涯20000時間勉強達成', requirement: 20000, type: 'lifetime', achievementRate: 0.02, rarity: 'transcendent' },
+    { id: 'eternal_student', name: '永遠の学生', icon: '♾️', desc: '生涯50000時間勉強達成', requirement: 50000, type: 'lifetime', achievementRate: 0.005, rarity: 'transcendent' },
+    
+    // 🌟 神話級バッジ（伝説の難易度）
+    { id: 'mythical_sage', name: '神話の賢者', icon: '🧙‍♂️', desc: '連続3年間毎日5時間勉強', requirement: 1095, type: 'mythical_streak', achievementRate: 0.01, rarity: 'transcendent' },
+    { id: 'cosmic_scholar', name: '宇宙学者', icon: '🌠', desc: '100科目で各100時間勉強', requirement: 100, type: 'cosmic_mastery', achievementRate: 0.003, rarity: 'transcendent' },
+    { id: 'time_transcendent', name: '時空超越者', icon: '⏳', desc: '1日24時間中20時間勉強を7日連続', requirement: 7, type: 'time_transcendent', achievementRate: 0.001, rarity: 'transcendent' },
+    { id: 'knowledge_singularity', name: '知識特異点', icon: '🌌', desc: '全てのバッジを獲得', requirement: 1, type: 'singularity', achievementRate: 0.0001, rarity: 'transcendent' }
+];
+
+        // 初期化
+        window.onload = function() {
+            loadData();
+            loadSubjects();
+            updateSelectedDate();
+            renderCalendar();
+            loadTodos();
+            updateStats();
+            createChart();
+            loadBadges();
+            loadFriendRanking();
+            loadBadgeProgress();
+            updateTimerStats();
+        };
+
+        // データ読み込み・保存
+        function loadData() {
+            const saved = localStorage.getItem('studyBuildData');
+            if (saved) {
+                try {
+                    const savedData = JSON.parse(saved);
+                    studyData = { ...studyData, ...savedData };
+
+                    // 保存データに残った古いサンプルフレンドや架空の記録を削除する
+                    // サンプル名にマッチするもの、または自分以外で不自然に統計が入っているものを削除
+                    const sampleNames = ['田中さん', '佐藤さん', '山田さん'];
+                    studyData.friends = (studyData.friends || []).filter(f => {
+                        if (f.isOwn) return true;
+                        if (sampleNames.includes(f.name)) return false;
+                        // time/tasks/badges に値が入っている（＝自動で生成された可能性）の場合削除
+                        const hasStats = (f.time && f.time > 0) || (f.tasks && f.tasks > 0) || (f.badges && f.badges.length > 0);
+                        return !hasStats;
+                    });
+                    // 上書き保存して古いデータを消去
+                    try { localStorage.setItem('studyBuildData', JSON.stringify(studyData)); } catch (e) { /* ignore */ }
+                } catch (e) {
+                    console.log('データの読み込みに失敗しました');
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('studyBuildData', JSON.stringify(studyData));
+        }
+
+        // タブ切り替え
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            // 呼び出し元ボタンが渡されない場合があるため、onclick 属性でボタンを検索して active を付与
+            const btn = document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`);
+            if (btn) btn.classList.add('active');
+
+            if (tabName === 'stats') {
+                setTimeout(() => {
+                    createChart();
+                    loadFriendRanking();
+                    loadBadgeProgress();
+                }, 100);
+            } else if (tabName === 'planner') {
+                renderCalendar();
+                loadTodos();
+            } else if (tabName === 'badges') {
+                loadBadges();
+            } else if (tabName === 'timeline') {
+                loadTimeline();
+            }
+        }
+
+        // カレンダー機能
+        function renderCalendar() {
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+            
+            document.getElementById('currentMonth').textContent = 
+                currentDate.getFullYear() + '年 ' + monthNames[currentDate.getMonth()];
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // 曜日ヘッダー
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day';
+                dayHeader.innerHTML = `<div class="calendar-day-number" style="font-weight: bold; color: #0d6efd;">${day}</div>`;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            if (calendarView === 'month') {
+                renderMonthView(calendarGrid);
+            } else {
+                renderWeekView(calendarGrid);
+            }
+        }
+
+        function renderMonthView(calendarGrid) {
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.onclick = () => selectDate(date);
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'calendar-day-number';
+                dayNumber.textContent = date.getDate();
+                dayElement.appendChild(dayNumber);
+                
+                if (date.getMonth() !== currentDate.getMonth()) {
+                    dayElement.classList.add('other-month');
+                }
+                
+                if (date.toDateString() === new Date().toDateString()) {
+                    dayElement.classList.add('today');
+                }
+                
+                if (date.toDateString() === selectedDate.toDateString()) {
+                    dayElement.classList.add('selected');
+                }
+                
+                // その日のTodoを表示
+                const dayTodos = getTodosForDate(date);
+                dayTodos.forEach(todo => {
+                    const todoElement = document.createElement('div');
+                    todoElement.className = 'calendar-todo';
+                    if (todo.completed) {
+                        todoElement.classList.add('completed');
+                    } else if (new Date(todo.dueDate) < new Date() && !todo.completed) {
+                        todoElement.classList.add('overdue');
+                    }
+                    todoElement.textContent = todo.title;
+                    todoElement.onclick = (e) => {
+                        e.stopPropagation();
+                        selectDate(date);
+                    };
+                    dayElement.appendChild(todoElement);
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        function renderWeekView(calendarGrid) {
+            const weekStart = new Date(selectedDate);
+            weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.onclick = () => selectDate(date);
+                dayElement.style.minHeight = '120px';
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'calendar-day-number';
+                dayNumber.textContent = date.getDate();
+                dayElement.appendChild(dayNumber);
+                
+                if (date.toDateString() === new Date().toDateString()) {
+                    dayElement.classList.add('today');
+                }
+                
+                if (date.toDateString() === selectedDate.toDateString()) {
+                    dayElement.classList.add('selected');
+                }
+                
+                // その日のTodoを表示
+                const dayTodos = getTodosForDate(date);
+                dayTodos.forEach(todo => {
+                    const todoElement = document.createElement('div');
+                    todoElement.className = 'calendar-todo';
+                    if (todo.completed) {
+                        todoElement.classList.add('completed');
+                    } else if (new Date(todo.dueDate) < new Date() && !todo.completed) {
+                        todoElement.classList.add('overdue');
+                    }
+                    todoElement.textContent = todo.title;
+                    todoElement.onclick = (e) => {
+                        e.stopPropagation();
+                        selectDate(date);
+                    };
+                    dayElement.appendChild(todoElement);
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function setCalendarView(view) {
+            calendarView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            const btn = document.querySelector(`.view-btn[onclick="setCalendarView('${view}')"]`);
+            if (btn) btn.classList.add('active');
+            renderCalendar();
+        }
+
+        function getDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function selectDate(date) {
+            selectedDate = new Date(date);
+            updateSelectedDate();
+            loadTodos();
+            renderCalendar();
+        }
+
+        function updateSelectedDate() {
+            const options = { month: 'long', day: 'numeric', weekday: 'long' };
+            const dateStr = selectedDate.toLocaleDateString('ja-JP', options);
+            document.getElementById('selectedDateHeader').textContent = 
+                selectedDate.toDateString() === new Date().toDateString() ? '今日のタスク' : dateStr + 'のタスク';
+        }
+
+        // Todo機能
+        function getTodosForDate(date) {
+            const dateStr = getDateString(date);
+            return studyData.todos.filter(todo => todo.dueDate === dateStr);
+        }
+
+        function addQuickTodo() {
+            const input = document.getElementById('quickTodoInput');
+            const title = input.value.trim();
+            
+            if (title) {
+                const todo = {
+                    id: Date.now(),
+                    title: title,
+                    subject: '',
+                    dueDate: getDateString(selectedDate), // タイムゾーン対応
+                    notes: '',
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                studyData.todos.push(todo);
+                input.value = '';
+                saveData();
+                loadTodos();
+                renderCalendar();
+            }
+        }
+
+        function openTodoModal() {
+            document.getElementById('todoModal').style.display = 'block';
+            document.getElementById('todoDate').value = getDateString(selectedDate);
+            
+            // 科目選択肢を更新
+            const todoSubject = document.getElementById('todoSubject');
+            todoSubject.innerHTML = '<option value="">科目を選択（任意）</option>';
+            studyData.subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                todoSubject.appendChild(option);
+            });
+        }
+
+        function closeTodoModal() {
+            document.getElementById('todoModal').style.display = 'none';
+            document.getElementById('todoTitle').value = '';
+            document.getElementById('todoSubject').value = '';
+            document.getElementById('todoDate').value = '';
+            document.getElementById('todoNotes').value = '';
+        }
+
+        function addDetailedTodo() {
+            const title = document.getElementById('todoTitle').value.trim();
+            const subject = document.getElementById('todoSubject').value;
+            const dueDate = document.getElementById('todoDate').value;
+            const notes = document.getElementById('todoNotes').value.trim();
+            
+            if (title && dueDate) {
+                const todo = {
+                    id: Date.now(),
+                    title: title,
+                    subject: subject,
+                    dueDate: dueDate, // タイムゾーン対応済み
+                    notes: notes,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                studyData.todos.push(todo);
+                saveData();
+                loadTodos();
+                renderCalendar();
+                closeTodoModal();
+                
+                // 追加した日付を選択
+                selectDate(new Date(dueDate));
+            }
+        }
+
+        function loadTodos() {
+            const todoList = document.getElementById('todoList');
+            todoList.innerHTML = '';
+            
+            const selectedTodos = getTodosForDate(selectedDate);
+            
+            if (selectedTodos.length === 0) {
+                todoList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">この日にはタスクがありません</p>';
+                return;
+            }
+            
+            selectedTodos.forEach(todo => {
+                const todoItem = document.createElement('div');
+                todoItem.className = 'todo-item';
+                
+                // 期限をローカルタイムゾーンで比較
+                const dueDateTZ = new Date(todo.dueDate + 'T00:00:00'); // タイムゾーンを考慮した日付オブジェクト
+                const isOverdue = dueDateTZ < new Date() && !todo.completed;
+
+                if (todo.completed) {
+                    todoItem.classList.add('completed');
+                } else if (isOverdue) {
+                    todoItem.classList.add('overdue');
+                }
+                
+                todoItem.innerHTML = `
+                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} 
+                           onchange="toggleTodo(${todo.id})">
+                    <div class="todo-content">
+                        <div class="todo-text ${todo.completed ? 'completed' : ''}">${todo.title}</div>
+                        <div class="todo-meta">
+                            ${todo.subject ? `📚 ${todo.subject}` : ''}
+                            ${todo.notes ? `📝 ${todo.notes}` : ''}
+                        </div>
+                    </div>
+                    <div class="todo-actions">
+                        <button class="btn btn-small btn-secondary" onclick="deleteTodo(${todo.id})">削除</button>
+                    </div>
+                `;
+                
+                todoList.appendChild(todoItem);
+            });
+        }
+
+        function toggleTodo(id) {
+            const todo = studyData.todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                if (todo.completed) {
+                    studyData.completedTodos++;
+                    // タイムラインに自動投稿
+                    createAutoPost('task_complete', { title: todo.title });
+                } else {
+                    studyData.completedTodos--;
+                }
+                saveData();
+                loadTodos();
+                renderCalendar();
+                updateStats();
+                checkBadges();
+            }
+        }
+
+        function deleteTodo(id) {
+            const index = studyData.todos.findIndex(t => t.id === id);
+            if (index > -1) {
+                if (studyData.todos[index].completed) {
+                    studyData.completedTodos--;
+                }
+                studyData.todos.splice(index, 1);
+                saveData();
+                loadTodos();
+                renderCalendar();
+                updateStats();
+            }
+        }
+
+        // タイマー機能の改善
+function startTimer() {
+    if (!isRunning) {
+        startTime = Date.now() - elapsedTime;
+        timer = setInterval(updateTimer, 1000);
+        isRunning = true;
+        const startBtn = document.getElementById('startBtn');
+        startBtn.textContent = '🔄 実行中...';
+        startBtn.classList.add('running');
+    }
+}
+
+function pauseTimer() {
+    if (isRunning) {
+        clearInterval(timer);
+        isRunning = false;
+        const startBtn = document.getElementById('startBtn');
+        startBtn.textContent = '▶️ 再開';
+        startBtn.classList.remove('running');
+    }
+}
+
+function stopTimer() {
+    if (elapsedTime > 0) {
+        const subject = document.getElementById('subjectSelect').value;
+        const minutes = Math.floor(elapsedTime / 60000);
+        
+        if (subject && minutes > 0) {
+            if (!studyData.studyTime[subject]) {
+                studyData.studyTime[subject] = 0;
+            }
+            studyData.studyTime[subject] += minutes;
+            studyData.totalTime += minutes;
+            
+            checkBadges();
+            saveData();
+            updateStats();
+            updateTimerStats();
+            createChart();
+            
+            // 成功アニメーション
+            showSuccessMessage(subject, minutes);
+
+            // タイムラインに自動投稿
+            createAutoPost('study_complete', { subject: subject, minutes: minutes });
+        }
+    }
+    
+    clearInterval(timer);
+    elapsedTime = 0;
+    isRunning = false;
+    const startBtn = document.getElementById('startBtn');
+    startBtn.textContent = '▶️ 開始';
+    startBtn.classList.remove('running');
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    updateTimerStats();
+}
+
+function updateTimer() {
+    elapsedTime = Date.now() - startTime;
+    const hours = Math.floor(elapsedTime / 3600000);
+    const minutes = Math.floor((elapsedTime % 3600000) / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    
+    const h = hours < 10 ? '0' + hours : hours;
+    const m = minutes < 10 ? '0' + minutes : minutes;
+    const s = seconds < 10 ? '0' + seconds : seconds;
+    
+    document.getElementById('timerDisplay').textContent = h + ':' + m + ':' + s;
+    updateTimerStats();
+}
+
+function updateTimerStats() {
+    const currentMinutes = Math.floor(elapsedTime / 60000);
+    document.getElementById('currentSession').textContent = currentMinutes;
+    
+    // 今日の勉強時間を計算（簡略化）
+    const todayTime = Math.floor(studyData.totalTime * 0.4); // 仮の計算
+    document.getElementById('todayStudyTime').textContent = todayTime;
+}
+
+function showSuccessMessage(subject, minutes) {
+    // 成功メッセージをより魅力的に
+    const message = `🎉 素晴らしい！\n\n📚 ${subject}\n⏰ ${minutes}分間\n\n集中して勉強できました！\nお疲れ様でした！ 💪✨`;
+    alert(message);
+}
+
+        // 科目管理
+        function addSubject() {
+            const input = document.getElementById('subjectInput');
+            const subject = input.value.trim();
+            
+            if (subject && studyData.subjects.indexOf(subject) === -1) {
+                studyData.subjects.push(subject);
+                input.value = '';
+                saveData();
+                loadSubjects();
+                updateStats();
+            }
+        }
+
+        function deleteSubject(subject) {
+            const index = studyData.subjects.indexOf(subject);
+            if (index > -1) {
+                studyData.subjects.splice(index, 1);
+                delete studyData.studyTime[subject];
+                saveData();
+                loadSubjects();
+                updateStats();
+                createChart();
+            }
+        }
+
+        function loadSubjects() {
+            const subjectList = document.getElementById('subjectList');
+            const subjectSelect = document.getElementById('subjectSelect');
+            
+            subjectList.innerHTML = '';
+            subjectSelect.innerHTML = '<option value="">科目を選択してください</option>';
+            
+            studyData.subjects.forEach(subject => {
+                const time = studyData.studyTime[subject] || 0;
+                
+                const subjectItem = document.createElement('div');
+                subjectItem.className = 'todo-item';
+                subjectItem.innerHTML = `
+                    <div class="todo-content">
+                        <div class="todo-text">${subject}</div>
+                        <div class="todo-meta">勉強時間: ${time}分</div>
+                    </div>
+                    <div class="todo-actions">
+                        <button class="btn btn-small btn-secondary" onclick="deleteSubject('${subject}')">削除</button>
+                    </div>
+                `;
+                subjectList.appendChild(subjectItem);
+                
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                subjectSelect.appendChild(option);
+            });
+        }
+
+        // フレンドランキング機能
+        function showRanking(type) {
+            studyData.currentRanking = type;
+            document.querySelectorAll('.ranking-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const btn = document.querySelector(`.ranking-tab-btn[onclick="showRanking('${type}')"]`);
+            if (btn) btn.classList.add('active');
+            loadFriendRanking();
+        }
+
+        function loadFriendRanking() {
+            const friendRanking = document.getElementById('friendRanking');
+            if (!friendRanking) return;
+            
+            friendRanking.innerHTML = '';
+            
+            // フレンドデータを更新
+            studyData.friends[0].time = studyData.totalTime;
+            studyData.friends[0].tasks = studyData.completedTodos;
+            studyData.friends[0].badges = studyData.badges;
+            
+            // ランキングソート
+            let sortedFriends = [...studyData.friends];
+
+            // フレンドが自分のみ（追加されたフレンドがいない）場合は案内を表示
+            const nonOwnFriends = sortedFriends.filter(f => !f.isOwn);
+            if (nonOwnFriends.length === 0) {
+                friendRanking.innerHTML = '<div class="no-friends" style="padding:16px;color:#6c757d;">フレンドを追加してください</div>';
+                return;
+            }
+            switch (studyData.currentRanking) {
+                case 'time':
+                    sortedFriends.sort((a, b) => b.time - a.time);
+                    break;
+                case 'tasks':
+                    sortedFriends.sort((a, b) => b.tasks - a.tasks);
+                    break;
+                case 'badges':
+                    sortedFriends.sort((a, b) => b.badges.length - a.badges.length);
+                    break;
+            }
+            
+            sortedFriends.forEach((friend, index) => {
+                const rankingItem = document.createElement('div');
+                rankingItem.className = 'ranking-item' + (friend.isOwn ? ' own' : '');
+                
+                let rankClass = '';
+                if (index === 0) rankClass = 'gold';
+                else if (index === 1) rankClass = 'silver';
+                else if (index === 2) rankClass = 'bronze';
+                
+                let scoreValue = '';
+                switch (studyData.currentRanking) {
+                    case 'time':
+                        scoreValue = friend.time + '分';
+                        break;
+                    case 'tasks':
+                        scoreValue = friend.tasks + '個';
+                        break;
+                    case 'badges':
+                        scoreValue = friend.badges.length + '個';
+                        break;
+                }
+                
+                rankingItem.innerHTML = `
+                    <div class="rank-badge ${rankClass}">${index + 1}</div>
+                    <div class="friend-info">
+                        <div class="friend-avatar">${friend.avatar}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${friend.name}${friend.isOwn ? ' (あなた)' : ''}</div>
+                            <div class="friend-stats">
+                                勉強時間: ${friend.time}分 | タスク: ${friend.tasks}個 | バッジ: ${friend.badges.length}個
+                            </div>
+                            <div class="friend-badges">
+                                ${friend.badges.slice(0, 5).map(badgeId => {
+                                    const badge = badgeDefinitions.find(b => b.id === badgeId);
+                                    return badge ? `<span class="mini-badge earned">${badge.icon}</span>` : '';
+                                }).join('')}
+                                ${friend.badges.length > 5 ? `<span class="mini-badge">+${friend.badges.length - 5}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ranking-score">${scoreValue}</div>
+                    ${index === 0 ? '<div class="crown-icon">👑</div>' : ''}
+                `;
+                
+                friendRanking.appendChild(rankingItem);
+            });
+        }
+
+        function openFriendModal() {
+            const friendName = prompt('フレンドの名前を入力してください:');
+            if (friendName && friendName.trim()) {
+                const trimmed = friendName.trim();
+                const confirmText = prompt(`${trimmed} さんを本当にフレンドに追加しますか？\n相手の同意がある場合は「追加」と入力してください。`);
+                if (confirmText && confirmText.trim() === '追加') {
+                    addFriend(trimmed);
+                } else {
+                    alert('フレンド追加をキャンセルしました。相手の同意を確認してください。');
+                }
+            }
+        }
+
+        function addFriend(name) {
+            // 基本チェック
+            if (!name || name.length < 2) {
+                alert('名前は2文字以上で入力してください。');
+                return;
+            }
+
+            // 不正／架空と思われる名前のパターンを排除
+            const lower = name.toLowerCase();
+            const suspiciousPatterns = [/^[0-9]+$/u, /架空/u, /テスト/u, /test/u, /dummy/u, /bot/u];
+            for (const pat of suspiciousPatterns) {
+                if (pat.test(name) || pat.test(lower)) {
+                    alert('無効な名前が検出されました。正しい名前を入力してください。');
+                    return;
+                }
+            }
+
+            const exists = studyData.friends.find(f => f.name === name);
+            if (exists) {
+                alert('そのフレンドは既に追加されています。');
+                return;
+            }
+
+            const avatars = ['👨', '👩', '👦', '👧', '🧑', '👴', '👵', '🧒', '👱', '🧔'];
+            const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+
+            // 自動で架空データを割り当てず、実際の相手のデータを待つ（初期値はゼロまたは空）
+            studyData.friends.push({
+                name: name,
+                time: 0,
+                tasks: 0,
+                badges: [],
+                avatar: randomAvatar,
+                isOwn: false
+            });
+
+            saveData();
+            loadFriendRanking();
+            alert(`${name}さんをフレンドに追加しました（統計は相手のデータ受領後に更新されます）。`);
+        }
+
+        function generateRandomBadges() {
+            const badges = [];
+            const availableBadges = ['first_study', 'consistent', 'productive', 'dedicated'];
+            const count = Math.floor(Math.random() * 4) + 1;
+            
+            for (let i = 0; i < count; i++) {
+                const randomBadge = availableBadges[Math.floor(Math.random() * availableBadges.length)];
+                if (!badges.includes(randomBadge)) {
+                    badges.push(randomBadge);
+                }
+            }
+            
+            return badges;
+        }
+
+            // --- Barcode scanner + OpenBD integration ---
+            let scannerActive = false;
+
+            function openScanner() {
+                const modal = document.getElementById('scannerModal');
+                if (!modal) return;
+                modal.classList.add('active');
+                document.getElementById('scannerResult').textContent = '';
+            }
+
+            function closeScanner() {
+                stopScanner();
+                const modal = document.getElementById('scannerModal');
+                if (!modal) return;
+                modal.classList.remove('active');
+            }
+
+            function startScanner() {
+                if (scannerActive) return;
+                const target = document.getElementById('scannerVideo');
+                if (!target) { alert('動画要素が見つかりません'); return; }
+
+                document.getElementById('scannerResult').textContent = 'カメラを初期化しています...';
+                Quagga.init({
+                    inputStream: {
+                        name: 'Live',
+                        type: 'LiveStream',
+                        target: target,
+                        constraints: { facingMode: 'environment' }
+                    },
+                    decoder: { readers: ['ean_reader','ean_13_reader','upc_reader'] },
+                    locate: true
+                }, function(err) {
+                    if (err) {
+                        console.error(err);
+                        document.getElementById('scannerResult').textContent = 'カメラの起動に失敗しました。ブラウザの権限を確認してください。';
+                        return;
+                    }
+                    Quagga.start();
+                    scannerActive = true;
+                    document.getElementById('scannerResult').textContent = '検出しています...';
+                    Quagga.onDetected(onQuaggaDetected);
+                });
+            }
+
+            function stopScanner() {
+                if (!scannerActive) return;
+                if (typeof Quagga !== 'undefined') {
+                    if (Quagga.stop) {
+                        try { Quagga.stop(); } catch (e) { console.warn(e); }
+                    }
+                    if (Quagga.offDetected) {
+                        try { Quagga.offDetected(onQuaggaDetected); } catch (e) { console.warn(e); }
+                    } else if (Quagga.off && typeof Quagga.off === 'function') {
+                        try { Quagga.off('detected', onQuaggaDetected); } catch (e) { console.warn(e); }
+                    }
+                }
+                scannerActive = false;
+            }
+
+            function onQuaggaDetected(result) {
+                if (!result || !result.codeResult) return;
+                const code = result.codeResult.code;
+                if (!code) return;
+                // ISBN は数字のみに
+                const isbn = code.replace(/[^0-9Xx]/g, '');
+                stopScanner();
+                document.getElementById('scannerResult').textContent = `検出: ${isbn} — 情報取得中...`;
+                fetchBookByIsbn(isbn);
+            }
+
+            function manualIsbn() {
+                const input = prompt('ISBN を入力してください（ハイフン可）:');
+                if (!input) return;
+                const isbn = input.replace(/[^0-9Xx]/g, '');
+                if (!isbn) { alert('無効なISBNです'); return; }
+                document.getElementById('scannerResult').textContent = `手動: ${isbn} — 情報取得中...`;
+                fetchBookByIsbn(isbn);
+            }
+
+            function fetchBookByIsbn(isbn) {
+                // OpenBD API
+                fetch(`https://api.openbd.jp/v1/get?isbn=${encodeURIComponent(isbn)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        // OpenBD は存在しないISBNの場合 [null] を返すことがある
+                        if (!data || !data[0]) {
+                            alert('該当書籍が見つかりませんでした。手入力してください。');
+                            return;
+                        }
+                        const info = data[0].summary || {};
+                        const title = info.title || '';
+                        const author = info.author || '';
+                        const publisher = info.publisher || '';
+                        const display = `${title}${author ? ' — ' + author : ''}${publisher ? ' — ' + publisher : ''}`;
+                        const ok = confirm(`以下の書籍を科目として追加しますか？\n${display}`);
+                        if (ok) {
+                            const normalizedTitle = title || isbn;
+                            if (!studyData.subjects.includes(normalizedTitle)) {
+                                studyData.subjects.push(normalizedTitle);
+                                studyData.studyTime[normalizedTitle] = 0;
+                                saveData();
+                                loadSubjects();
+                                alert('科目を追加しました: ' + normalizedTitle);
+                            } else {
+                                alert('既に同じ科目が存在します');
+                            }
+                            closeScanner();
+                        } else {
+                            document.getElementById('scannerResult').textContent = '追加をキャンセルしました。';
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('書籍情報の取得に失敗しました');
+                    });
+            }
+
+
+function loadBadgeProgress() {
+    const badgeProgressContainer = document.getElementById('badgeProgressContainer');
+    if (!badgeProgressContainer) return;
+    
+    badgeProgressContainer.innerHTML = '';
+    
+    badgeDefinitions.forEach(badge => {
+        const isEarned = studyData.badges.includes(badge.id);
+        let currentValue = 0;
+        let maxValue = badge.requirement;
+        let unit = badge.unit || '';
+        
+        if (badge.type === 'time') {
+            if (badge.unit === '時間') {
+                currentValue = Math.floor(studyData.totalTime / 60);
+                unit = '時間';
+            } else {
+                currentValue = studyData.totalTime;
+                unit = '分';
+            }
+        } else if (badge.type === 'tasks') {
+            currentValue = studyData.completedTodos;
+            unit = '個';
+        } else if (badge.type === 'subjects') {
+            currentValue = studyData.subjects.length;
+            unit = '科目';
+        } else {
+            currentValue = getSpecialBadgeProgress(badge);
+            unit = getSpecialBadgeUnit(badge);
+        }
+        
+        const progress = Math.min((currentValue / maxValue) * 100, 100);
+        
+        // 希少度に応じたクラス
+        const rarityClass = `rarity-${badge.rarity}`;
+        
+        // 達成率に応じた表示クラス
+        let rateClass = '';
+        if (badge.achievementRate < 1) rateClass = 'ultra-rare';
+        else if (badge.achievementRate < 5) rateClass = 'super-rare';
+        else if (badge.achievementRate < 20) rateClass = 'rare';
+        
+        const badgeProgressItem = document.createElement('div');
+        badgeProgressItem.className = 'badge-progress-item' + (isEarned ? ' earned' : '');
+        badgeProgressItem.innerHTML = `
+            <div class="badge-progress-header">
+                <span class="badge-progress-icon">${badge.icon}</span>
+                <div class="badge-progress-info">
+                    <div class="badge-progress-name">${badge.name}</div>
+                    <div class="badge-progress-desc">${badge.desc}</div>
+                </div>
+                <div class="badge-rarity ${rarityClass}">${badge.rarity}</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill ${isEarned ? 'completed' : ''}" style="width: ${progress}%"></div>
+            </div>
+            <div class="progress-text">
+                ${currentValue} / ${maxValue} ${unit}
+                ${isEarned ? '✅ 獲得済み' : `(残り ${Math.max(0, maxValue - currentValue)} ${unit})`}
+            </div>
+            <div class="badge-progress-stats">
+                <div class="global-stats">
+                    <span class="achievement-rate ${rateClass}">
+                        📊 全ユーザー達成率: ${badge.achievementRate}%
+                    </span>
+                </div>
+                <div class="rarity-indicator ${rarityClass}">
+                    ${getRarityLabel(badge.rarity)}
+                </div>
+            </div>
+        `;
+        
+        badgeProgressContainer.appendChild(badgeProgressItem);
+    });
+}
+
+// 希少度ラベル取得
+function getRarityLabel(rarity) {
+    const labels = {
+        'common': 'よくある',
+        'uncommon': 'やや珍しい',
+        'rare': '珍しい',
+        'epic': '非常に珍しい',
+        'legendary': '伝説級',
+        'mythical': '神話級',
+        'transcendent': '超越級'
+    };
+    return labels[rarity] || 'unknown';
+}
+
+function checkBadges() {
+    let newBadges = [];
+    
+    badgeDefinitions.forEach(badge => {
+        let earned = false;
+        
+        switch(badge.type) {
+            case 'time':
+                if (badge.unit === '時間') {
+                    earned = Math.floor(studyData.totalTime / 60) >= badge.requirement;
+                } else {
+                    earned = studyData.totalTime >= badge.requirement;
+                }
+                break;
+            case 'tasks':
+                earned = studyData.completedTodos >= badge.requirement;
+                break;
+            case 'subjects':
+                earned = studyData.subjects.length >= badge.requirement;
+                break;
+            case 'streak':
+                earned = getCurrentStreak() >= badge.requirement;
+                break;
+            // その他の特殊バッジの処理...
+            default:
+                earned = checkSpecialBadge(badge);
+                break;
+        }
+        
+        if (earned && !studyData.badges.includes(badge.id)) {
+            studyData.badges.push(badge.id);
+            newBadges.push(badge);
+        }
+    });
+    
+    // 新しいバッジの通知
+    newBadges.forEach((badge, index) => {
+        setTimeout(() => {
+            showBadgeNotification(badge);
+        }, 500 * (index + 1));
+    });
+    
+    if (newBadges.length > 0) {
+        loadBadgeProgress();
+        loadFriendRanking();
+    }
+}
+
+// 特殊バッジの進捗計算
+function getSpecialBadgeProgress(badge) {
+    switch(badge.type) {
+        case 'streak': return getCurrentStreak();
+        case 'early_study': return getEarlyStudyCount();
+        case 'night_study': return getNightStudyCount();
+        case 'weekend_study': return getWeekendStudyCount();
+        case 'long_session_3h': return getLongSessionCount(180);
+        case 'long_session_5h': return getLongSessionCount(300);
+        case 'long_session_8h': return getLongSessionCount(480);
+        case 'marathon_session': return getLongSessionCount(600);
+        case 'ultra_marathon': return getLongSessionCount(720);
+        case 'iron_will': return getLongSessionCount(900);
+        default: return 0;
+    }
+}
+
+// 特殊バッジの単位取得
+function getSpecialBadgeUnit(badge) {
+    switch(badge.type) {
+        case 'streak': return '日';
+        case 'early_study':
+        case 'night_study':
+        case 'weekend_study':
+        case 'long_session_3h':
+        case 'long_session_5h':
+        case 'long_session_8h':
+        case 'marathon_session':
+        case 'ultra_marathon':
+        case 'iron_will': return '回';
+        default: return '';
+    }
+}
+
+// 特殊バッジのチェック
+function checkSpecialBadge(badge) {
+    switch(badge.type) {
+        case 'daily_time':
+            return getMaxDailyTime() >= badge.requirement;
+        case 'daily_tasks':
+            return getMaxDailyTasks() >= badge.requirement;
+        case 'yearly_time':
+            return Math.floor(studyData.totalTime / 60) >= badge.requirement;
+        case 'lifetime':
+            return Math.floor(studyData.totalTime / 60) >= badge.requirement;
+        case 'singularity':
+            return studyData.badges.length >= badgeDefinitions.length - 1;
+        default:
+            return false;
+    }
+}
+
+function loadBadges() {
+    const badgeContainer = document.getElementById('badgeContainer');
+    if (!badgeContainer) return;
+    
+    badgeContainer.innerHTML = '';
+    
+    // 獲得済みバッジと未獲得バッジを分けて表示
+    const earnedBadges = badgeDefinitions.filter(badge => studyData.badges.includes(badge.id));
+    const unearnedBadges = badgeDefinitions.filter(badge => !studyData.badges.includes(badge.id));
+    
+    // 獲得済みバッジを希少度順でソート
+    earnedBadges.sort((a, b) => a.achievementRate - b.achievementRate);
+    
+    [...earnedBadges, ...unearnedBadges].forEach(badge => {
+        const isEarned = studyData.badges.includes(badge.id);
+        const rarityClass = `rarity-${badge.rarity}`;
+        
+        let rateClass = '';
+        if (badge.achievementRate < 1) rateClass = 'ultra-rare';
+        else if (badge.achievementRate < 5) rateClass = 'super-rare';
+        else if (badge.achievementRate < 20) rateClass = 'rare';
+        
+        const badgeElement = document.createElement('div');
+        badgeElement.className = 'badge' + (isEarned ? ' earned' : '');
+        badgeElement.style.position = 'relative';
+        
+        badgeElement.innerHTML = `
+            <span class="badge-icon">${badge.icon}</span>
+            <div class="badge-name">${badge.name}</div>
+            <div class="achievement-rate ${rateClass}">
+                ${badge.achievementRate}%
+            </div>
+            ${isEarned ? `<div class="badge-rarity ${rarityClass}">${badge.rarity}</div>` : ''}
+        `;
+        
+        // ツールチップ効果
+        badgeElement.title = `${badge.desc}\n達成率: ${badge.achievementRate}% (${getRarityLabel(badge.rarity)})`;
+        
+        badgeContainer.appendChild(badgeElement);
+    });
+    
+    // 統計情報を追加
+    addBadgeStatistics(earnedBadges);
+}
+
+// バッジ統計情報を追加
+function addBadgeStatistics(earnedBadges) {
+    const badgeContainer = document.getElementById('badgeContainer');
+    
+    const totalBadges = badgeDefinitions.length;
+    const earnedCount = earnedBadges.length;
+    const completionRate = ((earnedCount / totalBadges) * 100).toFixed(1);
+    
+    // 希少度別統計
+    const rarityStats = {};
+    earnedBadges.forEach(badge => {
+        rarityStats[badge.rarity] = (rarityStats[badge.rarity] || 0) + 1;
+    });
+    
+    // 最も希少なバッジ
+    const rarestBadge = earnedBadges.reduce((rarest, badge) => 
+        badge.achievementRate < (rarest?.achievementRate || Infinity) ? badge : rarest, null);
+    
+    const statsElement = document.createElement('div');
+    statsElement.className = 'badge-statistics';
+    statsElement.style.cssText = `
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #0d6efd;
+        margin-top: 20px;
+        text-align: center;
+    `;
+    
+    statsElement.innerHTML = `
+        <h4 style="color: #0d6efd; margin-bottom: 15px;">📊 あなたのバッジ統計</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div style="background: white; padding: 15px; border-radius: 8px;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #0d6efd;">${earnedCount}/${totalBadges}</div>
+                <div style="color: #6c757d;">獲得率: ${completionRate}%</div>
+            </div>
+            ${rarestBadge ? `
+            <div style="background: white; padding: 15px; border-radius: 8px;">
+                <div style="font-size: 1.2rem;">${rarestBadge.icon} ${rarestBadge.name}</div>
+                <div style="color: #dc3545; font-weight: bold;">最希少バッジ (${rarestBadge.achievementRate}%)</div>
+            </div>
+            ` : ''}
+            <div style="background: white; padding: 15px; border-radius: 8px;">
+                <div style="font-size: 1rem; font-weight: bold; color: #28a745;">
+                    上位 ${calculateUserRank(earnedBadges)}%
+                </div>
+                <div style="color: #6c757d;">全ユーザー中の順位</div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.9rem; color: #6c757d;">
+            💡 達成率1%未満のバッジは超レア！あなたは選ばれし学習者です！
+        </div>
+    `;
+    
+    badgeContainer.appendChild(statsElement);
+}
+
+// ユーザーランク計算（簡易版）
+function calculateUserRank(earnedBadges) {
+    const totalScore = earnedBadges.reduce((score, badge) => {
+        const rarityMultiplier = {
+            'common': 1, 'uncommon': 2, 'rare': 5, 'epic': 10,
+            'legendary': 25, 'mythical': 50, 'transcendent': 100
+        };
+        return score + (100 - badge.achievementRate) * (rarityMultiplier[badge.rarity] || 1);
+    }, 0);
+    
+    // スコアに基づいて上位パーセンテージを計算
+    if (totalScore > 10000) return 0.1;
+    if (totalScore > 5000) return 0.5;
+    if (totalScore > 2000) return 1;
+    if (totalScore > 1000) return 5;
+    if (totalScore > 500) return 10;
+    if (totalScore > 200) return 25;
+    return 50;
+}
+
+// 統計更新
+function updateStats() {
+    document.getElementById('totalTime').textContent = studyData.totalTime;
+    document.getElementById('completedTodos').textContent = studyData.completedTodos;
+    document.getElementById('totalSubjects').textContent = studyData.subjects.length;
+    document.getElementById('weeklyTime').textContent = Math.floor(studyData.totalTime * 0.7);
+}
+
+// チャート作成
+function createChart() {
+    const ctx = document.getElementById('studyChart');
+    if (!ctx) return;
+    
+    if (currentChart) {
+        currentChart.destroy();
+    }
+    
+    const subjects = Object.keys(studyData.studyTime);
+    const times = Object.values(studyData.studyTime);
+    
+    if (subjects.length === 0) {
+        ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+        return;
+    }
+    
+    currentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: subjects,
+            datasets: [{
+                data: times,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// バッジ通知表示
+function showBadgeNotification(badge) {
+    const rarityText = getRarityLabel(badge.rarity);
+    const message = `🎉 新しいバッジを獲得しました！\n\n${badge.icon} ${badge.name}\n${badge.desc}\n\n希少度: ${rarityText}\n達成率: ${badge.achievementRate}%\n\nおめでとうございます！ 🏆✨`;
+    alert(message);
+}
+
+// 現在の連続勉強日数を取得（簡易版）
+function getCurrentStreak() {
+    return Math.floor(studyData.totalTime / 60); // 簡易計算
+}
+
+// 早朝勉強回数を取得（簡易版）
+function getEarlyStudyCount() {
+    return Math.floor(studyData.totalTime / 120); // 簡易計算
+}
+
+// 夜間勉強回数を取得（簡易版）
+function getNightStudyCount() {
+    return Math.floor(studyData.totalTime / 100); // 簡易計算
+}
+
+// 週末勉強回数を取得（簡易版）
+function getWeekendStudyCount() {
+    return Math.floor(studyData.totalTime / 150); // 簡易計算
+}
+
+// 長時間セッション回数を取得（簡易版）
+function getLongSessionCount(minutes) {
+    return Math.floor(studyData.totalTime / (minutes * 2)); // 簡易計算
+}
+
+// 最大日間勉強時間を取得（簡易版）
+function getMaxDailyTime() {
+    return Math.floor(studyData.totalTime / 10); // 簡易計算
+}
+
+// 最大日間タスク数を取得（簡易版）
+function getMaxDailyTasks() {
+    return Math.floor(studyData.completedTodos / 5); // 簡易計算
+}
+
+// タイムライン機能
+function loadTimeline() {
+    const timelineContainer = document.getElementById('timelineContainer');
+    if (!timelineContainer) return;
+    
+    timelineContainer.innerHTML = '';
+    
+    if (studyData.timeline.length === 0) {
+        timelineContainer.innerHTML = `
+            <div class="no-posts">
+                <div class="no-posts-icon">📱</div>
+                <p>まだ投稿がありません。<br>最初の投稿をしてみましょう！</p>
+            </div>
+        `;
+        return;
+    }
+    
+    studyData.timeline.forEach(post => {
+        const postElement = createTimelinePost(post);
+        timelineContainer.appendChild(postElement);
+    });
+}
+
+function createPost() {
+    const content = document.getElementById('postContent').value.trim();
+    const type = document.getElementById('postType').value;
+    
+    if (!content) {
+        alert('投稿内容を入力してください。');
+        return;
+    }
+    
+    const post = {
+        id: Date.now(),
+        author: 'あなた',
+        avatar: '👤',
+        content: content,
+        type: type,
+        timestamp: new Date().toISOString(),
+        likes: 0,
+        comments: [],
+        isOwn: true
+    };
+    
+    studyData.timeline.unshift(post);
+    document.getElementById('postContent').value = '';
+    saveData();
+    loadTimeline();
+}
+
+function createAutoPost(type, data) {
+    let content = '';
+    let postType = 'study';
+    
+    switch(type) {
+        case 'study_complete':
+            content = `📚 ${data.subject}を${data.minutes}分間勉強しました！集中できて良かった！ 💪`;
+            postType = 'study';
+            break;
+        case 'task_complete':
+            content = `✅ 「${data.title}」を完了しました！一つずつ着実に進歩中！ 🎯`;
+            postType = 'achievement';
+            break;
+        case 'badge_earned':
+            content = `🏆 新しいバッジ「${data.name}」を獲得しました！${data.desc} ✨`;
+            postType = 'achievement';
+            break;
+    }
+    
+    if (content) {
+        const post = {
+            id: Date.now(),
+            author: 'あなた',
+            avatar: '👤',
+            content: content,
+            type: postType,
+            timestamp: new Date().toISOString(),
+            likes: 0,
+            comments: [],
+            isOwn: true
+        };
+        
+        studyData.timeline.unshift(post);
+        saveData();
+    }
+}
+
+function createTimelinePost(post) {
+    const postElement = document.createElement('div');
+    postElement.className = 'timeline-post' + (post.isOwn ? ' own' : '');
+    
+    const timeAgo = getTimeAgo(new Date(post.timestamp));
+    
+    postElement.innerHTML = `
+        <div class="post-header">
+            <div class="post-avatar">${post.avatar}</div>
+            <div class="post-info">
+                <div class="post-author">${post.author}</div>
+                <div class="post-time">${timeAgo}</div>
+            </div>
+            <span class="post-type ${post.type}">${getPostTypeLabel(post.type)}</span>
+        </div>
+        <div class="post-content">${post.content}</div>
+        <div class="post-actions">
+            <button class="post-action-btn ${post.liked ? 'liked' : ''}" onclick="toggleLike(${post.id})">
+                ❤️ ${post.likes}
+            </button>
+            <button class="post-action-btn" onclick="toggleComments(${post.id})">
+                💬 ${post.comments.length}
+            </button>
+        </div>
+        <div class="comments-section" id="comments-${post.id}">
+            <div class="comment-form">
+                <input type="text" class="comment-input" placeholder="コメントを入力..." id="comment-input-${post.id}">
+                <button class="comment-btn" onclick="addComment(${post.id})">投稿</button>
+            </div>
+            <div id="comment-list-${post.id}">
+                ${post.comments.map(comment => createCommentHTML(comment)).join('')}
+            </div>
+        </div>
+    `;
+    
+    return postElement;
+}
+
+function getPostTypeLabel(type) {
+    const labels = {
+        'study': '📚 勉強',
+        'achievement': '🏆 達成',
+        'motivation': '💪 応援',
+        'question': '❓ 質問'
+    };
+    return labels[type] || '📝 投稿';
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}日前`;
+    if (hours > 0) return `${hours}時間前`;
+    if (minutes > 0) return `${minutes}分前`;
+    return 'たった今';
+}
+
+function toggleLike(postId) {
+    const post = studyData.timeline.find(p => p.id === postId);
+    if (post) {
+        if (post.liked) {
+            post.likes--;
+            post.liked = false;
+        } else {
+            post.likes++;
+            post.liked = true;
+        }
+        saveData();
+        loadTimeline();
+    }
+}
+
+function toggleComments(postId) {
+    const commentsSection = document.getElementById(`comments-${postId}`);
+    if (commentsSection) {
+        commentsSection.classList.toggle('show');
+    }
+}
+
+function addComment(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    const content = input.value.trim();
+    
+    if (!content) return;
+    
+    const post = studyData.timeline.find(p => p.id === postId);
+    if (post) {
+        const comment = {
+            id: Date.now(),
+            author: 'あなた',
+            avatar: '👤',
+            content: content,
+            timestamp: new Date().toISOString()
+        };
+        
+        post.comments.push(comment);
+        input.value = '';
+        saveData();
+        loadTimeline();
+    }
+}
+
+function createCommentHTML(comment) {
+    const timeAgo = getTimeAgo(new Date(comment.timestamp));
+    return `
+        <div class="comment">
+            <div class="comment-avatar">${comment.avatar}</div>
+            <div class="comment-content">
+                <div class="comment-author">${comment.author}</div>
+                <div class="comment-text">${comment.content}</div>
+                <div class="comment-time">${timeAgo}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 科目追加方法切り替え
+function showAddMethod(method) {
+    document.querySelectorAll('.method-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.add-method-content').forEach(content => content.classList.remove('active'));
+    const btn = document.querySelector(`.method-tab-btn[onclick="showAddMethod('${method}')"]`);
+    if (btn) btn.classList.add('active');
+    document.getElementById(`${method}-add`).classList.add('active');
+}
+    </script>
+</body>
+</html>
